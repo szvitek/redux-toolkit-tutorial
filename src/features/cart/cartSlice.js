@@ -1,12 +1,32 @@
-import { createSlice } from '@reduxjs/toolkit';
-import cartItems from '../../cartItems';
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+// import cartItems from '../../cartItems';
+
+const url = 'https://course-api.com/react-useReducer-cart-project';
 
 const initialState = {
-  cartItems: cartItems,
+  cartItems: [],
   amount: 4,
   total: 0,
   isLoading: false,
 };
+
+export const getCartItems = createAsyncThunk(
+  'cart/getCartItems',
+  // first param is the args that we can pass with dispatch, we don't use it here
+  async (_, thunkAPI) => {
+    try {
+      // console.log(thunkAPI.getState());
+      const resp = await fetch(url);
+      if (!resp.ok) {
+        throw resp.statusText;
+      }
+      return resp.json();
+    } catch (error) {
+      console.log('err', error);
+      return thunkAPI.rejectWithValue(error);
+    }
+  }
+);
 
 const cartSlice = createSlice({
   name: 'cart',
@@ -44,6 +64,38 @@ const cartSlice = createSlice({
       state.total = total;
     },
   },
+  // builder callback notation, (new in RTK, recommended for typescript too)
+  extraReducers: (builder) => {
+    builder
+      .addCase(getCartItems.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(getCartItems.fulfilled, (state, action) => {
+        console.log(action);
+        state.isLoading = false;
+        state.cartItems = action.payload;
+      })
+      .addCase(getCartItems.rejected, (state, action) => {
+        // action.payload => what the is returned by the payloadCreator function
+        console.log(action);
+        state.isLoading = false;
+      });
+  },
+  // object key notation (now it's deprecated)
+  // extraReducers: {
+  //   [getCartItems.pending]: (state) => {
+  //     state.isLoading = true;
+  //   },
+  //   [getCartItems.fulfilled]: (state, action) => {
+  //     console.log(action);
+  //     state.isLoading = false;
+  //     state.cartItems = action.payload;
+  //   },
+  //   [getCartItems.rejected]: (state, action) => {
+  //     // action.payload => what the is returned by the payloadCreator function
+  //     state.isLoading = false;
+  //   },
+  // },
 });
 
 export const { clearCart, removeItem, increase, decrease, calculateTotals } =
